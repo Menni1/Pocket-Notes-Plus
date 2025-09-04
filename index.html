@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>Pocket Notes+</title>
+  <title>Pocket Notes++</title>
   <style>
     :root{
       --bg: #0b0b0c;
@@ -19,18 +19,19 @@
       --border:#26262b;
       --shadow: 0 8px 20px rgba(0,0,0,.35);
       --chip:#1b1b21;
+      --warn:#ffb020;
     }
     @media (prefers-color-scheme: light){
       html[data-theme="auto"]{
         --bg:#f7f7fb; --card:#ffffff; --text:#16161a; --muted:#5a5a66;
         --accent:#3a6cff; --accent-2:#6f93ff; --danger:#e74c3c; --ok:#2ecc71; --border:#e6e6ef; --shadow:0 8px 18px rgba(0,0,0,.08);
-        --chip:#f2f2f8;
+        --chip:#f2f2f8; --warn:#f3a500;
       }
     }
     html[data-theme="light"]{
       --bg:#f7f7fb; --card:#ffffff; --text:#16161a; --muted:#5a5a66;
       --accent:#3a6cff; --accent-2:#6f93ff; --danger:#e74c3c; --ok:#2ecc71; --border:#e6e6ef; --shadow:0 8px 18px rgba(0,0,0,.08);
-      --chip:#f2f2f8;
+      --chip:#f2f2f8; --warn:#f3a500;
     }
     html,body{height:100%; margin:0; background:var(--bg); color:var(--text); -webkit-tap-highlight-color: transparent;}
     *{box-sizing:border-box; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, Apple Color Emoji, Segoe UI Emoji;}
@@ -71,7 +72,7 @@
       position:fixed; left:0; right:0; bottom:0; z-index:5; background:var(--card);
       border-top:1px solid var(--border); padding-bottom: env(safe-area-inset-bottom);
     }
-    .tabs{display:grid; grid-template-columns:repeat(4,1fr);}
+    .tabs{display:grid; grid-template-columns:repeat(5,1fr);}
     .tab{display:flex; flex-direction:column; align-items:center; padding:8px 0 10px 0; color:var(--muted); font-size:11px; user-select:none}
     .tab svg{width:22px; height:22px; margin-bottom:4px; fill:currentColor}
     .tab.active{color:var(--accent)}
@@ -82,6 +83,7 @@
     .ed-actions{display:flex; gap:8px; margin-left:auto}
     .btn{border:1px solid var(--border); background:var(--card); color:var(--text); border-radius:10px; padding:10px 12px; font-size:14px}
     .btn.primary{background:linear-gradient(135deg,var(--accent),var(--accent-2)); color:#fff; border:none}
+    .btn.warn{border-color:var(--warn); color:var(--warn)}
     .ed-body{flex:1; overflow:auto; padding:12px}
     .ed-title{border:none; outline:none; width:100%; font-size:20px; font-weight:700; padding:8px 0; background:transparent; color:var(--text)}
     .row{display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin:8px 0}
@@ -95,6 +97,11 @@
     .ed-preview h1,.ed-preview h2,.ed-preview h3{margin:.6em 0 .3em}
     .danger{color:var(--danger)}
     .ok{color:var(--ok)}
+    .warn{color:var(--warn)}
+    .thumbs{display:flex; gap:8px; flex-wrap:wrap; margin-top:8px}
+    .thumb{border:1px solid var(--border); border-radius:10px; padding:6px; display:flex; align-items:center; gap:8px}
+    .thumb img{width:48px; height:48px; object-fit:cover; border-radius:6px}
+    .pill{padding:4px 8px; border:1px solid var(--border); border-radius:999px; font-size:12px}
     /* Panels */
     .panel{padding:12px}
     .panel h2{font-size:16px; margin:8px 0 12px 0}
@@ -108,7 +115,8 @@
     .kbd{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:12px; background:var(--card); border:1px solid var(--border); padding:2px 6px; border-radius:6px}
     a.link{color:var(--accent); text-decoration:none; border-bottom:1px dashed var(--accent-2)}
     .count{color:var(--muted); font-size:12px}
-    /* Print */
+    .toast{position:fixed; left:50%; transform:translateX(-50%); bottom: calc(80px + env(safe-area-inset-bottom)); background:var(--card); border:1px solid var(--border); padding:10px 14px; border-radius:999px; box-shadow:var(--shadow); display:none; gap:10px; align-items:center}
+    .toast .btn{padding:6px 10px; font-size:12px}
     @media print{
       nav, .fab, .search, header .ed-actions { display:none !important; }
       body { background:#fff; color:#000; }
@@ -120,8 +128,14 @@
 <div class="app" id="app">
   <header>
     <div class="titlebar">
-      <div class="app-title">Pocket Notes+</div>
-      <div class="ed-actions">
+      <div class="app-title">Pocket Notes++</div>
+      <div style="margin-left:auto; display:flex; gap:8px; align-items:center;">
+        <select id="sortSel" class="btn">
+          <option value="updated">Sort: Aktualisiert</option>
+          <option value="due">Sort: Fällig</option>
+          <option value="title">Sort: Titel</option>
+          <option value="created">Sort: Erstellt</option>
+        </select>
         <button class="btn" id="btnShare" title="Teilen" aria-label="Teilen">Teilen</button>
         <button class="btn" id="btnExport" title="Export" aria-label="Exportieren">Export</button>
         <button class="btn" id="btnPrint" title="PDF" aria-label="Als PDF drucken">PDF</button>
@@ -174,10 +188,20 @@
         <input id="fileImport" type="file" accept="application/json" class="hidden"/>
         <button class="btn danger" id="btnReset">Alles löschen</button>
       </div>
-      <p class="muted">Backup/Restore via JSON. „Alles löschen“ setzt die App auf Werkseinstellungen zurück.</p>
+      <div class="divider"></div>
+      <h2>Datenschutz</h2>
+      <div class="row">
+        <button class="btn" id="btnSetPass">Passcode setzen</button>
+        <button class="btn warn" id="btnClearPass">Passcode entfernen</button>
+        <span class="muted">Verschlüsselt lokal mit AES-GCM. <span id="encState" class="pill">Status: offen</span></span>
+      </div>
+      <p class="muted">Merke dir den Passcode gut. Ohne Passcode können verschlüsselte Daten nicht wiederhergestellt werden.</p>
       <div class="divider"></div>
       <h2>Zum Home-Bildschirm</h2>
-      <p class="muted">In Safari auf <span class="kbd">Teilen</span> tippen → <span class="kbd">Zum Home-Bildschirm</span>. Läuft dann wie eine App im Vollbild.</p>
+      <p class="muted">In Safari → <span class="kbd">Teilen</span> → <span class="kbd">Zum Home-Bildschirm</span>. Läuft dann wie eine App im Vollbild.</p>
+      <div class="divider"></div>
+      <h2>Papierkorb</h2>
+      <div id="trashList"></div>
     </section>
   </main>
 
@@ -198,8 +222,12 @@
         Tags
       </button>
       <button class="tab" data-tab="settings" id="tab-settings" aria-label="Einstellungen">
-        <svg viewBox="0 0 24 24"><path d="M12 8a4 4 0 100 8 4 4 0 000-8zm9 4l-1.8.7a7.2 7.2 0 01-.6 1.5l1 1.6-2.1 2.1-1.6-1a7.2 7.2 0 01-1.5.6L16 21h-4l-.7-1.8a7.2 7.2 0 01-1.5-.6l-1.6 1-2.1-2.1 1-1.6a7.2 7.2 0 01-.6-1.5L3 12l1.8-.7a7.2 7.2 0 01.6-1.5l-1-1.6L6.5 6.1l1.6 1a7.2 7.2 0 011.5-.6L12 3l.7 1.8a7.2 7.2 0 011.5.6l1.6-1L18.9 6.5l-1 1.6a7.2 7.2 0 01.6 1.5L21 12z"/></svg>
+        <svg viewBox="0 0 24 24"><path d="M12 8a4 4 0 100 8 4 4 0 000-8zm9 4l-1.8.7a7.2 7.2 0 01-.6 1.5l1 1.6-2.1 2.1-1.6-1a7.2 7.2 0 01-1.5.6L16 21h-4l-.7-1.8a7.2 7.2 0 01-1.5-.6l-1.6 1-2.1-2.1 1-1.6a7.2 7.2 0 01-.6-1.5L3 12l1.8-.7a7.2 7.2 0 01.6-1.5l-1-1.6L6.5 6.1l1.6 1a7.2 7.2 0 011.5-.6L12 3l.7 1.8a7.2 7.2 0 01.5.6l1.6-1L18.9 6.5l-1 1.6a7.2 7.2 0 01.6 1.5L21 12z"/></svg>
         Einstellungen
+      </button>
+      <button class="tab" data-tab="help" id="tab-help" aria-label="Vorlagen">
+        <svg viewBox="0 0 24 24"><path d="M4 6h16v2H4V6zm0 4h10v2H4v-2zm0 4h16v2H4v-2z"/></svg>
+        Vorlagen
       </button>
     </div>
   </nav>
@@ -213,6 +241,7 @@
       <div class="app-title" id="edHeader">Neue Notiz</div>
       <div class="ed-actions">
         <button class="btn" id="btnPreview">Preview</button>
+        <button class="btn" id="btnICS" title="Kalender-Datei">ICS</button>
         <button class="btn" id="btnCopy">Kopieren</button>
         <button class="btn danger" id="btnDelete">Löschen</button>
         <button class="btn primary" id="btnDone">Fertig</button>
@@ -229,14 +258,35 @@
         <span>Anheften</span>
       </label>
       <input id="edDue" type="date" />
+      <span class="muted">Fällig</span>
     </div>
     <textarea id="edContent" class="ed-content" placeholder="Schreibe hier … (Markdown + Aufgaben)"></textarea>
+    <div class="row">
+      <input id="fileAttach" type="file" multiple accept="image/*,.pdf,.txt,.md,.csv,.json" />
+      <span class="muted">Anhänge werden lokal gespeichert (Speicherlimit des Browsers beachten).</span>
+    </div>
+    <div id="attachments" class="thumbs"></div>
     <div id="edPreview" class="ed-preview hidden"></div>
     <div class="row">
       <span class="muted" id="edMeta"></span>
+      <span class="pill" id="sizeInfo"></span>
     </div>
   </div>
 </div>
+
+<!-- TOAST -->
+<div class="toast" id="toast">
+  <span id="toastMsg"></span>
+  <button class="btn" id="toastUndo">Rückgängig</button>
+</div>
+
+<!-- HELP / TEMPLATES (rendered in notes view as cards) -->
+<template id="tpl-help">
+  <section class="panel">
+    <h2>Vorlagen</h2>
+    <div class="list" id="help-cards"></div>
+  </section>
+</template>
 
 <script>
 (() => {
@@ -244,48 +294,115 @@
   const $ = sel => document.querySelector(sel);
   const $$ = sel => [...document.querySelectorAll(sel)];
   const now = () => new Date().toISOString();
-  const fmtDate = iso => {
-    try { const d = new Date(iso); return d.toLocaleString(); } catch(e){ return ""; }
-  };
+  const fmtDate = iso => { try { const d = new Date(iso); return d.toLocaleString(); } catch(e){ return ""; } };
   const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
   const debounce = (fn, ms=300) => { let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms);} };
-  const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
+  const b64size = (dataUrl='') => {
+    const i = dataUrl.indexOf('base64,');
+    if(i<0) return 0;
+    const len = dataUrl.length - (i+7);
+    return Math.floor(len * 3/4);
+  };
 
   // ---- State
-  const LS_KEY = "pocket_notes_plus_v1";
+  const LS_KEY = "pocket_notes_pp_v1";
+  const LS_KEY_ENC = "pocket_notes_pp_enc_v1";
+  let passHash = null;
   const state = {
     notes: [],
     collections: [{id:"inbox", name:"Allgemein", color:"#7aa3ff"}],
-    settings: { theme:"auto" },
+    settings: { theme:"auto", sort:"updated" },
+    trash: [],
+    meta: { locked: false }
   };
-  function loadState(){
+
+  // ---- Encryption (AES-GCM + PBKDF2)
+  const W = window.crypto || window.msCrypto;
+  async function deriveKey(pass, salt){
+    const enc = new TextEncoder();
+    const keyMat = await W.subtle.importKey('raw', enc.encode(pass), 'PBKDF2', false, ['deriveKey']);
+    return await W.subtle.deriveKey(
+      {name:'PBKDF2', salt, iterations: 120000, hash: 'SHA-256'},
+      keyMat, {name:'AES-GCM', length:256}, false, ['encrypt','decrypt']
+    );
+  }
+  async function encryptState(pass){
+    const enc = new TextEncoder();
+    const salt = W.getRandomValues(new Uint8Array(16));
+    const iv = W.getRandomValues(new Uint8Array(12));
+    const key = await deriveKey(pass, salt);
+    const data = enc.encode(JSON.stringify(state));
+    const ct = new Uint8Array(await W.subtle.encrypt({name:'AES-GCM', iv}, key, data));
+    const blob = {v:2, salt: Array.from(salt), iv: Array.from(iv), data: Array.from(ct)};
+    localStorage.setItem(LS_KEY_ENC, JSON.stringify(blob));
+    localStorage.removeItem(LS_KEY);
+    state.meta.locked = true;
+    $("#encState").textContent = "Status: verschlüsselt";
+  }
+  async function decryptState(pass){
+    const raw = localStorage.getItem(LS_KEY_ENC);
+    if(!raw) return false;
+    const blob = JSON.parse(raw);
+    const salt = new Uint8Array(blob.salt), iv = new Uint8Array(blob.iv), ct = new Uint8Array(blob.data);
+    const key = await deriveKey(pass, salt);
+    const pt = await W.subtle.decrypt({name:'AES-GCM', iv}, key, ct);
+    const dec = new TextDecoder().decode(new Uint8Array(pt));
+    const parsed = JSON.parse(dec);
+    Object.assign(state, parsed);
+    state.meta.locked = true;
+    $("#encState").textContent = "Status: verschlüsselt";
+    return true;
+  }
+
+  // ---- Load/Save
+  function saveState(){
+    if(state.meta.locked){
+      encryptState(passHash || '');
+    }else{
+      localStorage.setItem(LS_KEY, JSON.stringify(state));
+    }
+  }
+  const saveStateDeb = debounce(saveState, 250);
+
+  async function loadState(){
     try {
-      const raw = localStorage.getItem(LS_KEY);
-      if(raw){ const parsed = JSON.parse(raw); Object.assign(state, parsed); }
-      else {
-        // Seed
-        state.notes.push({
-          id: uid(),
-          title: "Willkommen 👋",
-          content: "Dies ist deine **Pocket Notes+** App.\n\n- Schreibe alles, was dir einfällt.\n- Organisiere mit *Tags* (z. B. `#arbeit, #privat`) und **Sammlungen**.\n- Erstelle Aufgaben mit `- [ ]` und hake sie mit einem Tipp ab.\n- Tippe unten auf **＋** für eine neue Notiz.\n\n> Tipp: In der Vorschau werden Markdown & Aufgaben gerendert.",
-          tags:["start","info"],
-          collectionId:"inbox",
-          pinned:true,
-          due:null,
-          createdAt: now(),
-          updatedAt: now()
-        });
-        saveState();
+      const encRaw = localStorage.getItem(LS_KEY_ENC);
+      if(encRaw){
+        const pass = prompt("Passcode eingeben, um Notizen zu entsperren:");
+        if(pass && pass.length>0){
+          try { passHash = pass; await decryptState(pass); }
+          catch(e){ alert("Entschlüsselung fehlgeschlagen. Falscher Passcode?"); }
+        } else {
+          alert("Ohne Passcode können verschlüsselte Notizen nicht angezeigt werden.");
+        }
+      } else {
+        const raw = localStorage.getItem(LS_KEY);
+        if(raw){ const parsed = JSON.parse(raw); Object.assign(state, parsed); }
+        else {
+          state.notes.push({
+            id: uid(),
+            title: "Willkommen 👋",
+            content: "Dies ist deine **Pocket Notes++** App.\n\n- Schreibe alles, was dir einfällt.\n- Organisiere mit *Tags* (`#arbeit, #privat`) und **Sammlungen**.\n- Erstelle Aufgaben mit `- [ ]` und hake sie in der Vorschau ab.\n- Fälligkeit setzen → später als **ICS** exportieren.\n- Anhänge hinzufügen (Bilder/PDF/Texte).\n\n> Tipp: Unter **Einstellungen → Passcode** kannst du alles verschlüsseln.",
+            tags:["start","info"],
+            collectionId:"inbox",
+            pinned:true,
+            due:null,
+            attachments:[],
+            createdAt: now(),
+            updatedAt: now()
+          });
+          saveState();
+        }
       }
     } catch(e){ console.error(e); }
   }
-  const saveState = () => localStorage.setItem(LS_KEY, JSON.stringify(state));
-  const saveStateDeb = debounce(saveState, 250);
 
   // ---- Theming
   function applyTheme(){
     document.documentElement.setAttribute("data-theme", state.settings.theme || "auto");
     $("#themeSel").value = state.settings.theme || "auto";
+    $("#sortSel").value = state.settings.sort || "updated";
+    $("#encState").textContent = state.meta.locked ? "Status: verschlüsselt" : "Status: offen";
   }
 
   // ---- Tabs
@@ -294,7 +411,8 @@
       notes: "#view-notes",
       collections: "#view-collections",
       tags: "#view-tags",
-      settings: "#view-settings"
+      settings: "#view-settings",
+      help: "#view-notes"
     };
     for(const k in map){
       const el = document.querySelector(map[k]);
@@ -305,6 +423,8 @@
     if(name==="notes"){ renderNotes(); }
     if(name==="collections"){ renderCollections(); }
     if(name==="tags"){ renderTags(); }
+    if(name==="help"){ renderHelp(); }
+    if(name==="settings"){ renderTrash(); }
   }
 
   // ---- Data helpers
@@ -317,8 +437,16 @@
     saveStateDeb();
   };
   const removeNote = (id) => {
-    state.notes = state.notes.filter(n=>n.id!==id);
+    const n = state.notes.find(x=>x.id===id);
+    if(!n) return;
+    state.notes = state.notes.filter(m=>m.id!==id);
+    state.trash.unshift({...n, deletedAt: now()});
     saveState();
+    showToast("Notiz gelöscht.", undoDelete);
+    function undoDelete(){
+      const t = state.trash.shift();
+      if(t){ delete t.deletedAt; state.notes.unshift(t); saveState(); renderNotes(); renderTrash(); }
+    }
   };
 
   // ---- Filters & Search
@@ -332,7 +460,7 @@
   function setTag(tag){ currentFilter.tag = (currentFilter.tag===tag? null : tag); renderNotes(); }
   function setCollectionFilter(id){ currentFilter.collection = (currentFilter.collection===id? null : id); renderNotes(); }
 
-  // ---- Rendering: Filter chips
+  // ---- Filter chips
   function renderFilterChips(){
     const row = $("#filterRow"); row.innerHTML="";
     const chips = [
@@ -357,14 +485,31 @@
     }
   }
 
-  // ---- Rendering: Notes
+  // ---- Sorting
+  function sorter(a,b){
+    const s = state.settings.sort || "updated";
+    if(s==="title"){ return (a.title||"").localeCompare(b.title||""); }
+    if(s==="created"){ return new Date(b.createdAt)-new Date(a.createdAt); }
+    if(s==="due"){
+      const ad = a.due||"9999-12-31", bd = b.due||"9999-12-31";
+      if(ad===bd) return new Date(b.updatedAt)-new Date(a.updatedAt);
+      return ad.localeCompare(bd);
+    }
+    return (b.pinned - a.pinned) || (new Date(b.updatedAt)-new Date(a.updatedAt));
+  }
+
+  // ---- Notes rendering
+  function getTaskProgress(text){
+    const total = (text.match(/^- \[( |x)\] /gmi)||[]).length;
+    const done = (text.match(/^- \[x\] /gmi)||[]).length;
+    return {done,total};
+  }
   function renderNotes(){
     renderFilterChips();
     const wrap = $("#view-notes"); wrap.innerHTML="";
     const q = currentFilter.query.toLowerCase();
     let notes = state.notes.slice();
 
-    // filters
     if(q){
       notes = notes.filter(n =>
         (n.title||"").toLowerCase().includes(q) ||
@@ -380,8 +525,7 @@
     }
     if(currentFilter.collection){ notes = notes.filter(n => (n.collectionId||"inbox") === currentFilter.collection); }
 
-    // sort: pinned first, then updated desc
-    notes.sort((a,b) => (b.pinned - a.pinned) || (new Date(b.updatedAt)-new Date(a.updatedAt)));
+    notes.sort(sorter);
 
     if(notes.length===0){
       const empty = document.createElement("div");
@@ -398,13 +542,14 @@
       const colDot = `<span class="color-dot" style="background:${col.color}"></span>`;
       const taskInfo = getTaskProgress(n.content||"");
       const taskBadge = taskInfo.total>0 ? `<span class="tag">${taskInfo.done}/${taskInfo.total} ✅</span>` : "";
+      const attBadge = (n.attachments&&n.attachments.length>0)? `<span class="tag">📎 ${n.attachments.length}</span>` : "";
       div.innerHTML = `
         <h3>${escapeHTML(n.title || "Ohne Titel")} ${colDot}</h3>
         <p>${escapeHTML(snippet)}${snippet.length>=140?"…":""}</p>
         <div class="meta">
           <span class="count">📁 ${escapeHTML(col.name)}</span>
           ${ (n.tags||[]).map(t=>`<span class="tag">#${escapeHTML(t)}</span>`).join("") }
-          ${ taskBadge }
+          ${ taskBadge } ${ attBadge }
           ${ n.due ? `<span class="tag ${n.due <= (new Date().toISOString().slice(0,10)) ? 'danger':'ok'}">⏰ ${n.due}</span>` : "" }
           <span class="muted">· Aktualisiert ${escapeHTML(fmtDate(n.updatedAt))}</span>
           <button class="pin" aria-label="Pin">${n.pinned?"★":"☆"}</button>
@@ -419,7 +564,7 @@
     }
   }
 
-  // ---- Rendering: Collections & Tags views
+  // ---- Collections, Tags, Trash
   function renderCollections(){
     const box = $("#collectionsList"); box.innerHTML="";
     for(const c of state.collections){
@@ -471,6 +616,29 @@
       box.appendChild(row);
     }
   }
+  function renderTrash(){
+    const box = $("#trashList"); box.innerHTML="";
+    if(state.trash.length===0){ box.innerHTML = `<div class="muted">Papierkorb ist leer.</div>`; return; }
+    for(const t of state.trash){
+      const row = document.createElement("div"); row.className="note";
+      row.innerHTML = `
+        <div style="display:flex; align-items:center; gap:10px;">
+          <h3 style="margin:0">${escapeHTML(t.title||'Ohne Titel')}</h3>
+          <span class="count">gelöscht: ${escapeHTML(fmtDate(t.deletedAt))}</span>
+          <span style="margin-left:auto;"></span>
+          <button class="btn" data-restore="${t.id}">Wiederherstellen</button>
+          <button class="btn danger" data-del="${t.id}">Endgültig löschen</button>
+        </div>`;
+      row.querySelector(`[data-restore="${t.id}"]`).addEventListener("click", ()=>{
+        const idx = state.trash.findIndex(x=>x.id===t.id);
+        if(idx>-1){ const n = state.trash.splice(idx,1)[0]; delete n.deletedAt; state.notes.unshift(n); saveState(); renderTrash(); renderNotes(); }
+      });
+      row.querySelector(`[data-del="${t.id}"]`).addEventListener("click", ()=>{
+        if(confirm("Wirklich endgültig löschen?")){ state.trash = state.trash.filter(x=>x.id!==t.id); saveState(); renderTrash(); }
+      });
+      box.appendChild(row);
+    }
+  }
 
   // ---- Editor
   let edNote = null;
@@ -479,7 +647,7 @@
     const isNew = !edNote;
     if(isNew){
       edNote = {
-        id: uid(), title:"", content:"", tags:[], collectionId:"inbox", pinned:false, due:null, createdAt: now(), updatedAt: now()
+        id: uid(), title:"", content:"", tags:[], collectionId:"inbox", pinned:false, due:null, attachments:[], createdAt: now(), updatedAt: now()
       };
       state.notes.push(edNote); saveState();
     }
@@ -493,7 +661,7 @@
     $("#edContent").classList.remove("hidden");
     $("#btnPreview").textContent = "Preview";
     updateMeta();
-    // collections select
+    renderAttachments();
     const sel = $("#edCollection"); sel.innerHTML="";
     for(const c of state.collections){
       const opt = document.createElement("option"); opt.value = c.id; opt.textContent = c.name;
@@ -509,6 +677,8 @@
   }
   function updateMeta(){
     $("#edMeta").textContent = `Erstellt: ${fmtDate(edNote.createdAt)} · Aktualisiert: ${fmtDate(edNote.updatedAt)}`;
+    const attBytes = (edNote.attachments||[]).reduce((s,a)=> s + (a.dataUrl? b64size(a.dataUrl):0), 0);
+    $("#sizeInfo").textContent = `Anhänge: ${(attBytes/1024/1024).toFixed(2)} MB`;
   }
   function collectEditor(){
     edNote.title = $("#edTitle").value.trim();
@@ -522,7 +692,7 @@
   }
   const onEdChange = debounce(()=>{ collectEditor(); updateMeta(); }, 200);
 
-  // Simple Markdown + task preview
+  // Markdown + tasks
   function mdToHtml(md){
     let h = escapeHTML(md);
     h = h.replace(/^###### (.*)$/gm, "<h6>$1</h6>")
@@ -534,65 +704,87 @@
     h = h.replace(/\*\*(.+?)\*\*/g, "<b>$1</b>")
          .replace(/\*(.+?)\*/g, "<i>$1</i>")
          .replace(/`(.+?)`/g, "<code>$1</code>");
-    // Tasks: - [ ] and - [x]
     h = h.replace(/^- \[ \] (.*)$/gm, '<label><input type="checkbox" data-task="0"> $1</label>')
          .replace(/^- \[x\] (.*)$/gmi, '<label><input type="checkbox" data-task="1" checked> $1</label>');
-    // Lists
     h = h.replace(/(^|\n)\- (?!\[)(.*)/g, "$1• $2");
-    // Links [text](url)
     h = h.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, `<a class="link" target="_blank" rel="noopener">$1</a>`);
-    // Paragraphs
     h = h.replace(/\n{2,}/g, "</p><p>").replace(/\n/g,"<br>");
     return `<p>${h}</p>`;
   }
   function bindTaskToggles(container){
-    container.querySelectorAll('input[type="checkbox"][data-task]').forEach(cb=>{
+    container.querySelectorAll('input[type="checkbox"][data-task]').forEach((cb, idx)=>{
+      cb.dataset.idx = idx;
       cb.addEventListener('change', () => {
-        // Toggle in source text: find nth task occurrence and switch
-        const src = $("#edContent").value;
-        const lines = src.split(/\n/);
-        let seen = 0;
-        for(let i=0;i<lines.length;i++){
-          if(lines[i].match(/^- \[( |x)\] /i)){
-            if(seen===0 && !cb._bound){ /* marker to avoid multiple toggles in same render */ }
-            if(seen===cb.dataset.idx*1){
-              lines[i] = lines[i].replace(/^- \[( |x)\] /i, cb.checked? "- [x] " : "- [ ] ");
+        const src = $("#edContent").value.split(/\n/);
+        let k = -1;
+        for(let i=0;i<src.length;i++){
+          if(/^- \[( |x)\] /i.test(src[i])){
+            k++;
+            if(k===Number(cb.dataset.idx)){
+              src[i] = src[i].replace(/^- \[( |x)\] /i, cb.checked? "- [x] " : "- [ ] ");
               break;
             }
-            seen++;
           }
         }
-        $("#edContent").value = lines.join("\n");
+        $("#edContent").value = src.join("\n");
         collectEditor();
-        showPreview(); // re-render
+        showPreview();
       });
     });
-  }
-  function getTaskProgress(text){
-    const total = (text.match(/^- \[( |x)\] /gmi)||[]).length;
-    const done = (text.match(/^- \[x\] /gmi)||[]).length;
-    return {done,total};
   }
   function showPreview(){
     collectEditor();
     const prev = $("#edPreview");
     prev.innerHTML = mdToHtml(edNote.content||"");
-    // index the checkboxes so toggling maps to original line
-    let idx = 0;
-    prev.querySelectorAll('input[data-task]').forEach(cb => { cb.dataset.idx = idx++; });
     bindTaskToggles(prev);
   }
 
-  // ---- Export / Import / Share / Copy / PDF
+  // ---- Attachments
+  $("#fileAttach").addEventListener("change", async (e)=>{
+    const files = [...(e.target.files||[])];
+    for(const f of files){
+      const reader = new FileReader();
+      reader.onload = () => {
+        const dataUrl = reader.result;
+        if(!edNote.attachments) edNote.attachments = [];
+        edNote.attachments.push({id:uid(), name:f.name, type:f.type, dataUrl, size:f.size});
+        collectEditor(); renderAttachments();
+      };
+      reader.readAsDataURL(f);
+    }
+    e.target.value="";
+  });
+  function renderAttachments(){
+    const box = $("#attachments"); box.innerHTML="";
+    (edNote.attachments||[]).forEach(att => {
+      const div = document.createElement("div"); div.className="thumb";
+      const isImg = (att.type||"").startsWith("image/");
+      div.innerHTML = `${isImg? `<img src="${att.dataUrl}" alt="">` : `<div class="pill">${escapeHTML(att.type||'Datei')}</div>`}
+        <div>
+          <div>${escapeHTML(att.name||'Anhang')}</div>
+          <div class="muted">${((att.size||b64size(att.dataUrl))/1024).toFixed(0)} KB</div>
+        </div>
+        <span style="margin-left:auto;"></span>
+        <a class="btn" download="${escapeAttr(att.name||'download')}" href="${att.dataUrl}">Öffnen</a>
+        <button class="btn danger" data-del="${att.id}">Entfernen</button>`;
+      div.querySelector(`[data-del="${att.id}"]`).addEventListener("click", ()=>{
+        edNote.attachments = (edNote.attachments||[]).filter(x=>x.id!==att.id);
+        collectEditor(); renderAttachments();
+      });
+      box.appendChild(div);
+    });
+    updateMeta();
+  }
+
+  // ---- Export / Import / Share / PDF / ICS
   function doExport(){
     const data = JSON.stringify(state, null, 2);
     const blob = new Blob([data], {type:"application/json"});
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `pocket-notes-${new Date().toISOString().slice(0,10)}.json`; a.rel="noopener";
-    document.body.appendChild(a);
-    a.click();
+    a.download = `pocket-notes-backup-${new Date().toISOString().slice(0,10)}.json`; a.rel="noopener";
+    document.body.appendChild(a); a.click();
     setTimeout(()=> { URL.revokeObjectURL(url); a.remove(); }, 0);
   }
   function doImport(file){
@@ -601,15 +793,13 @@
       try {
         const incoming = JSON.parse(reader.result);
         if(!incoming || !incoming.notes) throw new Error("Ungültiges Format");
-        // naive merge by id (replace if exists)
         const ids = new Set(state.notes.map(n=>n.id));
         for(const n of incoming.notes){ if(ids.has(n.id)){ state.notes = state.notes.map(x=> x.id===n.id?n:x); } else { state.notes.push(n); } }
-        // collections merge
         const colIds = new Set(state.collections.map(c=>c.id));
         for(const c of (incoming.collections||[])){ if(!colIds.has(c.id)) state.collections.push(c); }
-        // settings
         if(incoming.settings) state.settings = incoming.settings;
-        saveState(); applyTheme(); renderNotes(); renderCollections(); renderTags();
+        if(incoming.trash) state.trash = incoming.trash.concat(state.trash);
+        saveState(); applyTheme(); renderNotes(); renderCollections(); renderTags(); renderTrash();
         alert("Import abgeschlossen ✅");
       } catch(e){ alert("Import fehlgeschlagen: " + e.message); }
     };
@@ -618,34 +808,75 @@
   async function doShare(){
     try{
       const text = `${state.notes.length} Notizen · Export am ${new Date().toLocaleString()}`;
-      if(navigator.share){
-        await navigator.share({ title:"Pocket Notes+", text });
-      } else {
-        await navigator.clipboard.writeText(text);
-        alert("Info in Zwischenablage kopiert.");
-      }
-    }catch(e){ /* Nutzer abgebrochen */ }
+      if(navigator.share){ await navigator.share({ title:"Pocket Notes++", text }); }
+      else { await navigator.clipboard.writeText(text); alert("Info in Zwischenablage kopiert."); }
+    }catch(e){}
   }
-  async function copyCurrent(){
-    if(!edNote) return;
-    try{
-      await navigator.clipboard.writeText(`# ${edNote.title}\n\n${edNote.content}`);
-      alert("Notiz in Zwischenablage kopiert.");
-    }catch(e){ alert("Kopieren nicht möglich."); }
-  }
-  function doPrint(){
-    window.print();
+  function doPrint(){ window.print(); }
+  function escapeICS(s=""){ return s.replace(/[,\n;]/g, ' '); }
+  function downloadICS(){
+    if(!edNote || !edNote.due){ alert("Bitte ein Fälligkeitsdatum setzen."); return; }
+    const dt = new Date(edNote.due+"T09:00:00");
+    const dtEnd = new Date(dt.getTime()+60*60*1000);
+    const toCal = d => d.toISOString().replace(/[-:]/g,'').split('.')[0]+'Z';
+    const ics = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "PRODID:-//Pocket Notes++//DE",
+      "BEGIN:VEVENT",
+      `UID:${edNote.id}@pocket-notes`,
+      `DTSTAMP:${toCal(new Date())}`,
+      `DTSTART:${toCal(dt)}`,
+      `DTEND:${toCal(dtEnd)}`,
+      `SUMMARY:${escapeICS(edNote.title||"Notiz")}`,
+      `DESCRIPTION:${escapeICS(edNote.content||"")}`,
+      "END:VEVENT",
+      "END:VCALENDAR"
+    ].join("\r\n");
+    const blob = new Blob([ics], {type:"text/calendar"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href=url; a.download=`${(edNote.title||"Notiz").slice(0,30)}.ics`;
+    document.body.appendChild(a); a.click();
+    setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); },0);
   }
 
-  // ---- Collections handlers
-  function addCollection(){
-    const name = $("#newCollectionName").value.trim();
-    const color = $("#newCollectionColor").value || "#7aa3ff";
-    if(!name) return;
-    state.collections.push({id: uid(), name, color});
-    $("#newCollectionName").value="";
-    saveState(); renderCollections();
+  // ---- Templates
+  const templates = [
+    {title:"Meeting-Notiz", content:`# Thema\n- Datum: ${new Date().toLocaleDateString()}\n- Teilnehmer: \n\n## Agenda\n- \n\n## Notizen\n- \n\n## Aufgaben\n- [ ] Besitzer – Aufgabe – Termin`, tags:["meeting"]},
+    {title:"Tägliches Journal", content:`# Journal ${new Date().toLocaleDateString()}\n## Dankbar für\n- \n## Heute erledigen\n- [ ] \n## Gedanken\n- `, tags:["journal"]},
+    {title:"To-Do Liste", content:`# To-Do\n- [ ] \n- [ ] \n- [ ] `, tags:["todo"]}
+  ];
+  function renderHelp(){
+    const wrap = $("#view-notes"); wrap.innerHTML="";
+    const tpl = $("#tpl-help").content.cloneNode(true);
+    const list = tpl.querySelector("#help-cards");
+    templates.forEach(t => {
+      const card = document.createElement("div"); card.className="note";
+      card.innerHTML = `<h3>${escapeHTML(t.title)}</h3><p>${escapeHTML(t.content.slice(0,120))}…</p>
+      <div class="meta"><button class="btn primary">Einfügen</button></div>`;
+      card.querySelector("button").addEventListener("click", ()=>{
+        openEditor(null);
+        $("#edTitle").value = t.title;
+        $("#edContent").value = t.content;
+        $("#edTags").value = t.tags.join(", ");
+        collectEditor();
+      });
+      list.appendChild(card);
+    });
+    wrap.appendChild(tpl);
   }
+
+  // ---- Toast
+  let toastTimer = null, undoFn = null;
+  function showToast(msg, onUndo){
+    $("#toastMsg").textContent = msg;
+    $("#toast").style.display = "flex";
+    undoFn = onUndo || null;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(hideToast, 4000);
+  }
+  function hideToast(){ $("#toast").style.display = "none"; undoFn=null; }
+  $("#toastUndo").addEventListener("click", ()=>{ if(undoFn) undoFn(); hideToast(); });
 
   // ---- Safety helpers
   function escapeHTML(str=""){
@@ -655,37 +886,58 @@
     return escapeHTML(str).replace(/"/g, '&quot;');
   }
 
-  // ---- Event wiring
+  // ---- Events
   function wireEvents(){
-    // Tabs
-    $$("#tab-notes, #tab-collections, #tab-tags, #tab-settings").forEach(t => {
+    $$("#tab-notes, #tab-collections, #tab-tags, #tab-settings, #tab-help").forEach(t => {
       t.addEventListener("click", () => showTab(t.dataset.tab));
     });
-    // Search
     $("#search").addEventListener("input", e => setQuery(e.target.value));
     $("#btnClear").addEventListener("click", ()=>{ $("#search").value=""; setQuery(""); });
-    // FAB
+    $("#sortSel").addEventListener("change", e => { state.settings.sort = e.target.value; saveState(); renderNotes(); });
     $("#fab").addEventListener("click", ()=> openEditor(null));
-    // Collections view
-    $("#btnAddCollection").addEventListener("click", addCollection);
-    // Settings
+    $("#btnAddCollection").addEventListener("click", ()=>{
+      const name = $("#newCollectionName").value.trim();
+      const color = $("#newCollectionColor").value || "#7aa3ff";
+      if(!name) return;
+      state.collections.push({id: uid(), name, color});
+      $("#newCollectionName").value="";
+      saveState(); renderCollections(); renderNotes();
+    });
     $("#themeSel").addEventListener("change", e => { state.settings.theme = e.target.value; applyTheme(); saveState(); });
     $("#btnExport").addEventListener("click", doExport);
     $("#btnPrint").addEventListener("click", doPrint);
     $("#btnImport").addEventListener("click", ()=> $("#fileImport").click());
     $("#fileImport").addEventListener("change", e => { const f = e.target.files?.[0]; if(f) doImport(f); e.target.value=""; });
-    $("#btnReset").addEventListener("click", ()=>{
-      if(confirm("Wirklich ALLES löschen?")){ localStorage.removeItem(LS_KEY); location.reload(); }
-    });
+    $("#btnReset").addEventListener("click", ()=>{ if(confirm("Wirklich ALLES löschen?")){ localStorage.removeItem(LS_KEY); localStorage.removeItem(LS_KEY_ENC); location.reload(); } });
     $("#btnShare").addEventListener("click", doShare);
+    $("#btnSetPass").addEventListener("click", async ()=>{
+      const p1 = prompt("Neuen Passcode eingeben:");
+      if(!p1) return;
+      const p2 = prompt("Passcode wiederholen:");
+      if(p1!==p2){ alert("Passcodes stimmen nicht überein."); return; }
+      passHash = p1;
+      await encryptState(passHash);
+      alert("Verschlüsselung aktiviert. Beim nächsten Start wird der Passcode benötigt.");
+    });
+    $("#btnClearPass").addEventListener("click", ()=>{
+      if(!state.meta.locked){ alert("Kein Passcode gesetzt."); return; }
+      const p = prompt("Zum Entfernen Passcode eingeben:");
+      if(p!==passHash){ alert("Falscher Passcode."); return; }
+      state.meta.locked = false;
+      localStorage.setItem(LS_KEY, JSON.stringify(state));
+      localStorage.removeItem(LS_KEY_ENC);
+      applyTheme();
+      alert("Passcode entfernt. Daten liegen wieder unverschlüsselt vor.");
+    });
 
-    // Editor
     $("#btnClose").addEventListener("click", closeEditor);
     $("#btnDone").addEventListener("click", ()=> { collectEditor(); closeEditor(); });
-    $("#btnDelete").addEventListener("click", ()=>{
-      if(confirm("Notiz endgültig löschen?")){ removeNote(edNote.id); closeEditor(); }
+    $("#btnDelete").addEventListener("click", ()=>{ if(confirm("Notiz in den Papierkorb verschieben?")){ removeNote(edNote.id); closeEditor(); renderTrash(); } });
+    $("#btnCopy").addEventListener("click", async ()=>{
+      if(!edNote) return;
+      try{ await navigator.clipboard.writeText(`# ${edNote.title}\n\n${edNote.content}`); alert("Notiz in Zwischenablage kopiert."); }
+      catch(e){ alert("Kopieren nicht möglich."); }
     });
-    $("#btnCopy").addEventListener("click", copyCurrent);
     $("#btnPreview").addEventListener("click", ()=>{
       const prev = $("#edPreview"), ta = $("#edContent");
       if(prev.classList.contains("hidden")){
@@ -699,8 +951,8 @@
         $("#btnPreview").textContent = "Preview";
       }
     });
+    $("#btnICS").addEventListener("click", downloadICS);
 
-    // Editor live update
     ["edTitle","edTags","edContent","edCollection","edPinned","edDue"].forEach(id => {
       const el = $("#"+id);
       el.addEventListener(el.type==="checkbox"?"change":"input", onEdChange);
@@ -708,15 +960,18 @@
   }
 
   // ---- Init
-  loadState();
-  applyTheme();
-  wireEvents();
-  renderNotes();
-
-  // Keyboard-safe space on iOS
-  window.visualViewport && visualViewport.addEventListener("resize", debounce(()=>{
-    document.body.style.height = visualViewport.height + "px";
-  }, 100));
+  (async () => {
+    await loadState();
+    applyTheme();
+    wireEvents();
+    renderNotes();
+    renderCollections();
+    renderTags();
+    renderTrash();
+    window.visualViewport && visualViewport.addEventListener("resize", debounce(()=>{
+      document.body.style.height = visualViewport.height + "px";
+    }, 100));
+  })();
 })();
 </script>
 </body>
