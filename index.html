@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="auto">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Pocket Notes+</title>
+  <style>
+    :root{
+      --bg: #0b0b0c;
+      --card: #151518;
+      --text: #f2f2f3;
+      --muted: #a0a0a8;
+      --accent: #4f8cff;
+      --accent-2:#7aa3ff;
+      --danger:#ff5f57;
+      --ok:#2ecc71;
+      --border:#26262b;
+      --shadow: 0 8px 20px rgba(0,0,0,.35);
+      --chip:#1b1b21;
+    }
+    @media (prefers-color-scheme: light){
+      html[data-theme="auto"]{
+        --bg:#f7f7fb; --card:#ffffff; --text:#16161a; --muted:#5a5a66;
+        --accent:#3a6cff; --accent-2:#6f93ff; --danger:#e74c3c; --ok:#2ecc71; --border:#e6e6ef; --shadow:0 8px 18px rgba(0,0,0,.08);
+        --chip:#f2f2f8;
+      }
+    }
+    html[data-theme="light"]{
+      --bg:#f7f7fb; --card:#ffffff; --text:#16161a; --muted:#5a5a66;
+      --accent:#3a6cff; --accent-2:#6f93ff; --danger:#e74c3c; --ok:#2ecc71; --border:#e6e6ef; --shadow:0 8px 18px rgba(0,0,0,.08);
+      --chip:#f2f2f8;
+    }
+    html,body{height:100%; margin:0; background:var(--bg); color:var(--text); -webkit-tap-highlight-color: transparent;}
+    *{box-sizing:border-box; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, Apple Color Emoji, Segoe UI Emoji;}
+    .app{height:100dvh; display:flex; flex-direction:column; padding-bottom: calc(56px + env(safe-area-inset-bottom));}
+    header{
+      position:sticky; top:0; z-index:5;
+      backdrop-filter: saturate(1.2) blur(8px);
+      background: color-mix(in oklab, var(--bg) 85%, transparent);
+      border-bottom:1px solid var(--border);
+      padding: calc(10px + env(safe-area-inset-top)) 12px 10px 12px;
+    }
+    .titlebar{display:flex; align-items:center; gap:10px;}
+    .app-title{font-weight:700; font-size:18px; letter-spacing:.2px}
+    .search{margin-top:10px; display:flex; gap:8px; align-items:center;}
+    .search input{
+      width:100%; border:1px solid var(--border); border-radius:12px; padding:12px 14px;
+      background:var(--card); color:var(--text); outline:none; font-size:16px;
+    }
+    .chiprow{display:flex; gap:8px; margin-top:10px; overflow:auto; padding-bottom:4px;}
+    .chip{border:1px solid var(--border); background:var(--chip); padding:8px 12px; border-radius:999px; font-size:13px; color:var(--muted)}
+    .chip.active{border-color:var(--accent); color:var(--accent)}
+    .content{flex:1; overflow:auto;}
+    .list{padding:12px;}
+    .note{background:var(--card); border:1px solid var(--border); border-radius:14px; padding:12px; margin-bottom:12px; box-shadow:var(--shadow);}
+    .note h3{margin:2px 0 6px 0; font-size:16px}
+    .note p{margin:0; color:var(--muted); font-size:14px; line-height:1.3}
+    .meta{display:flex; align-items:center; gap:10px; margin-top:10px; color:var(--muted); font-size:12px; flex-wrap:wrap}
+    .tag{padding:4px 8px; border:1px dashed var(--border); border-radius:999px}
+    .pin{margin-left:auto; border:none; background:transparent; color:var(--accent); font-size:18px}
+    .color-dot{width:10px;height:10px;border-radius:50%;display:inline-block;border:1px solid var(--border)}
+    .empty{opacity:.6; text-align:center; padding:32px 16px}
+    .fab{
+      position: fixed; right:16px; bottom: calc(72px + env(safe-area-inset-bottom));
+      width:56px; height:56px; border-radius:50%; border:none; color:white; font-size:24px;
+      background:linear-gradient(135deg,var(--accent),var(--accent-2)); box-shadow:0 12px 24px rgba(79,140,255,.35);
+    }
+    nav{
+      position:fixed; left:0; right:0; bottom:0; z-index:5; background:var(--card);
+      border-top:1px solid var(--border); padding-bottom: env(safe-area-inset-bottom);
+    }
+    .tabs{display:grid; grid-template-columns:repeat(4,1fr);}
+    .tab{display:flex; flex-direction:column; align-items:center; padding:8px 0 10px 0; color:var(--muted); font-size:11px; user-select:none}
+    .tab svg{width:22px; height:22px; margin-bottom:4px; fill:currentColor}
+    .tab.active{color:var(--accent)}
+    .hidden{display:none}
+    /* Editor */
+    .editor{position:fixed; inset:0; z-index:10; background:var(--bg); display:none; flex-direction:column}
+    .editor header{border-bottom:1px solid var(--border)}
+    .ed-actions{display:flex; gap:8px; margin-left:auto}
+    .btn{border:1px solid var(--border); background:var(--card); color:var(--text); border-radius:10px; padding:10px 12px; font-size:14px}
+    .btn.primary{background:linear-gradient(135deg,var(--accent),var(--accent-2)); color:#fff; border:none}
+    .ed-body{flex:1; overflow:auto; padding:12px}
+    .ed-title{border:none; outline:none; width:100%; font-size:20px; font-weight:700; padding:8px 0; background:transparent; color:var(--text)}
+    .row{display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin:8px 0}
+    .row input, .row select{
+      border:1px solid var(--border); background:var(--card); color:var(--text);
+      border-radius:10px; padding:10px 12px; font-size:14px;
+    }
+    .color-input{width:44px; padding:6px}
+    .ed-content{width:100%; min-height:40vh; border:1px solid var(--border); border-radius:12px; background:var(--card); color:var(--text); padding:12px; font-size:16px; line-height:1.45; resize:vertical}
+    .ed-preview{border:1px solid var(--border); border-radius:12px; background:var(--card); padding:12px; line-height:1.45}
+    .ed-preview h1,.ed-preview h2,.ed-preview h3{margin:.6em 0 .3em}
+    .danger{color:var(--danger)}
+    .ok{color:var(--ok)}
+    /* Panels */
+    .panel{padding:12px}
+    .panel h2{font-size:16px; margin:8px 0 12px 0}
+    .row .switch{display:flex; align-items:center; gap:8px}
+    .switch input{appearance:none; width:42px; height:26px; border-radius:999px; position:relative; background:#8884; outline:none; transition:.2s}
+    .switch input:checked{background:var(--accent)}
+    .switch input::after{content:""; position:absolute; top:3px; left:3px; width:20px; height:20px; border-radius:50%; background:#fff; transition:.2s}
+    .switch input:checked::after{left:19px}
+    .muted{color:var(--muted); font-size:13px}
+    .divider{height:1px; background:var(--border); margin:12px -12px}
+    .kbd{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:12px; background:var(--card); border:1px solid var(--border); padding:2px 6px; border-radius:6px}
+    a.link{color:var(--accent); text-decoration:none; border-bottom:1px dashed var(--accent-2)}
+    .count{color:var(--muted); font-size:12px}
+    /* Print */
+    @media print{
+      nav, .fab, .search, header .ed-actions { display:none !important; }
+      body { background:#fff; color:#000; }
+      .note { box-shadow:none; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
+  </style>
+</head>
+<body>
+<div class="app" id="app">
+  <header>
+    <div class="titlebar">
+      <div class="app-title">Pocket Notes+</div>
+      <div class="ed-actions">
+        <button class="btn" id="btnShare" title="Teilen" aria-label="Teilen">Teilen</button>
+        <button class="btn" id="btnExport" title="Export" aria-label="Exportieren">Export</button>
+        <button class="btn" id="btnPrint" title="PDF" aria-label="Als PDF drucken">PDF</button>
+      </div>
+    </div>
+    <div class="search">
+      <input id="search" placeholder="Suchen: Titel, Inhalt oder #Tag …" inputmode="search" />
+      <button class="btn" id="btnClear">X</button>
+    </div>
+    <div class="chiprow" id="filterRow"></div>
+  </header>
+
+  <main class="content">
+    <!-- NOTES -->
+    <section id="view-notes" class="list"></section>
+
+    <!-- COLLECTIONS -->
+    <section id="view-collections" class="panel hidden">
+      <h2>Sammlungen</h2>
+      <div id="collectionsList"></div>
+      <div class="divider"></div>
+      <div class="row">
+        <input id="newCollectionName" placeholder="Neue Sammlung …" />
+        <input id="newCollectionColor" class="color-input" type="color" value="#4f8cff" />
+        <button class="btn primary" id="btnAddCollection">Anlegen</button>
+      </div>
+      <p class="muted">Tipp: Weise Notizen im Editor einer Sammlung zu. Jede Sammlung kann eine Farbe erhalten.</p>
+    </section>
+
+    <!-- TAGS -->
+    <section id="view-tags" class="panel hidden">
+      <h2>Tags</h2>
+      <div id="tagsList"></div>
+      <p class="muted">Tippe einen Tag an, um danach zu filtern. Tags werden im Editor per Komma gesetzt.</p>
+    </section>
+
+    <!-- SETTINGS -->
+    <section id="view-settings" class="panel hidden">
+      <h2>Einstellungen</h2>
+      <div class="row switch">
+        <label for="themeSel">Design</label>
+        <select id="themeSel">
+          <option value="auto">Automatisch</option>
+          <option value="light">Hell</option>
+          <option value="dark">Dunkel</option>
+        </select>
+      </div>
+      <div class="row">
+        <button class="btn" id="btnImport">Import</button>
+        <input id="fileImport" type="file" accept="application/json" class="hidden"/>
+        <button class="btn danger" id="btnReset">Alles löschen</button>
+      </div>
+      <p class="muted">Backup/Restore via JSON. „Alles löschen“ setzt die App auf Werkseinstellungen zurück.</p>
+      <div class="divider"></div>
+      <h2>Zum Home-Bildschirm</h2>
+      <p class="muted">In Safari auf <span class="kbd">Teilen</span> tippen → <span class="kbd">Zum Home-Bildschirm</span>. Läuft dann wie eine App im Vollbild.</p>
+    </section>
+  </main>
+
+  <button class="fab" id="fab" title="Neue Notiz" aria-label="Neue Notiz">＋</button>
+
+  <nav>
+    <div class="tabs">
+      <button class="tab active" data-tab="notes" id="tab-notes" aria-label="Notizen">
+        <svg viewBox="0 0 24 24"><path d="M4 4h12v4h4v12H4V4zm12 0v4h4"/></svg>
+        Notizen
+      </button>
+      <button class="tab" data-tab="collections" id="tab-collections" aria-label="Sammlungen">
+        <svg viewBox="0 0 24 24"><path d="M3 7h18v2H3V7zm0 4h12v2H3v-2zm0 4h18v2H3v-2z"/></svg>
+        Sammlungen
+      </button>
+      <button class="tab" data-tab="tags" id="tab-tags" aria-label="Tags">
+        <svg viewBox="0 0 24 24"><path d="M10 3l10 10-7 7L3 10V3h7zm-2 4a2 2 0 104 0 2 2 0 00-4 0z"/></svg>
+        Tags
+      </button>
+      <button class="tab" data-tab="settings" id="tab-settings" aria-label="Einstellungen">
+        <svg viewBox="0 0 24 24"><path d="M12 8a4 4 0 100 8 4 4 0 000-8zm9 4l-1.8.7a7.2 7.2 0 01-.6 1.5l1 1.6-2.1 2.1-1.6-1a7.2 7.2 0 01-1.5.6L16 21h-4l-.7-1.8a7.2 7.2 0 01-1.5-.6l-1.6 1-2.1-2.1 1-1.6a7.2 7.2 0 01-.6-1.5L3 12l1.8-.7a7.2 7.2 0 01.6-1.5l-1-1.6L6.5 6.1l1.6 1a7.2 7.2 0 011.5-.6L12 3l.7 1.8a7.2 7.2 0 011.5.6l1.6-1L18.9 6.5l-1 1.6a7.2 7.2 0 01.6 1.5L21 12z"/></svg>
+        Einstellungen
+      </button>
+    </div>
+  </nav>
+</div>
+
+<!-- EDITOR SHEET -->
+<div class="editor" id="editor" role="dialog" aria-modal="true" aria-labelledby="edTitle">
+  <header>
+    <div class="titlebar">
+      <button class="btn" id="btnClose">Zurück</button>
+      <div class="app-title" id="edHeader">Neue Notiz</div>
+      <div class="ed-actions">
+        <button class="btn" id="btnPreview">Preview</button>
+        <button class="btn" id="btnCopy">Kopieren</button>
+        <button class="btn danger" id="btnDelete">Löschen</button>
+        <button class="btn primary" id="btnDone">Fertig</button>
+      </div>
+    </div>
+  </header>
+  <div class="ed-body">
+    <input id="edTitle" class="ed-title" placeholder="Titel" autocomplete="off" />
+    <div class="row">
+      <input id="edTags" placeholder="Tags (kommagetrennt)" />
+      <select id="edCollection"></select>
+      <label class="switch">
+        <input type="checkbox" id="edPinned" />
+        <span>Anheften</span>
+      </label>
+      <input id="edDue" type="date" />
+    </div>
+    <textarea id="edContent" class="ed-content" placeholder="Schreibe hier … (Markdown + Aufgaben)"></textarea>
+    <div id="edPreview" class="ed-preview hidden"></div>
+    <div class="row">
+      <span class="muted" id="edMeta"></span>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  // ---- Utilities
+  const $ = sel => document.querySelector(sel);
+  const $$ = sel => [...document.querySelectorAll(sel)];
+  const now = () => new Date().toISOString();
+  const fmtDate = iso => {
+    try { const d = new Date(iso); return d.toLocaleString(); } catch(e){ return ""; }
+  };
+  const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
+  const debounce = (fn, ms=300) => { let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms);} };
+  const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
+
+  // ---- State
+  const LS_KEY = "pocket_notes_plus_v1";
+  const state = {
+    notes: [],
+    collections: [{id:"inbox", name:"Allgemein", color:"#7aa3ff"}],
+    settings: { theme:"auto" },
+  };
+  function loadState(){
+    try {
+      const raw = localStorage.getItem(LS_KEY);
+      if(raw){ const parsed = JSON.parse(raw); Object.assign(state, parsed); }
+      else {
+        // Seed
+        state.notes.push({
+          id: uid(),
+          title: "Willkommen 👋",
+          content: "Dies ist deine **Pocket Notes+** App.\n\n- Schreibe alles, was dir einfällt.\n- Organisiere mit *Tags* (z. B. `#arbeit, #privat`) und **Sammlungen**.\n- Erstelle Aufgaben mit `- [ ]` und hake sie mit einem Tipp ab.\n- Tippe unten auf **＋** für eine neue Notiz.\n\n> Tipp: In der Vorschau werden Markdown & Aufgaben gerendert.",
+          tags:["start","info"],
+          collectionId:"inbox",
+          pinned:true,
+          due:null,
+          createdAt: now(),
+          updatedAt: now()
+        });
+        saveState();
+      }
+    } catch(e){ console.error(e); }
+  }
+  const saveState = () => localStorage.setItem(LS_KEY, JSON.stringify(state));
+  const saveStateDeb = debounce(saveState, 250);
+
+  // ---- Theming
+  function applyTheme(){
+    document.documentElement.setAttribute("data-theme", state.settings.theme || "auto");
+    $("#themeSel").value = state.settings.theme || "auto";
+  }
+
+  // ---- Tabs
+  function showTab(name){
+    const map = {
+      notes: "#view-notes",
+      collections: "#view-collections",
+      tags: "#view-tags",
+      settings: "#view-settings"
+    };
+    for(const k in map){
+      const el = document.querySelector(map[k]);
+      if(!el) continue;
+      if(k===name){ el.classList.remove("hidden"); } else { el.classList.add("hidden"); }
+    }
+    $$(".tab").forEach(t => t.classList.toggle("active", t.dataset.tab===name));
+    if(name==="notes"){ renderNotes(); }
+    if(name==="collections"){ renderCollections(); }
+    if(name==="tags"){ renderTags(); }
+  }
+
+  // ---- Data helpers
+  const getCollection = id => state.collections.find(c=>c.id===id) || state.collections[0];
+  const getCollectionName = id => getCollection(id).name;
+  const getCollectionColor = id => getCollection(id).color || "#7aa3ff";
+  const upsertNote = (n) => {
+    const i = state.notes.findIndex(x=>x.id===n.id);
+    if(i>-1) state.notes[i]=n; else state.notes.push(n);
+    saveStateDeb();
+  };
+  const removeNote = (id) => {
+    state.notes = state.notes.filter(n=>n.id!==id);
+    saveState();
+  };
+
+  // ---- Filters & Search
+  let currentFilter = { query:"", tag:null, pinOnly:false, dueOnly:false, collection:null };
+  function setQuery(q){ currentFilter.query = q.trim(); renderNotes(); }
+  function toggleChip(key){
+    if(key==="pin"){ currentFilter.pinOnly = !currentFilter.pinOnly; }
+    if(key==="due"){ currentFilter.dueOnly = !currentFilter.dueOnly; }
+    renderNotes();
+  }
+  function setTag(tag){ currentFilter.tag = (currentFilter.tag===tag? null : tag); renderNotes(); }
+  function setCollectionFilter(id){ currentFilter.collection = (currentFilter.collection===id? null : id); renderNotes(); }
+
+  // ---- Rendering: Filter chips
+  function renderFilterChips(){
+    const row = $("#filterRow"); row.innerHTML="";
+    const chips = [
+      {key:"pin", label:"Angeheftet"},
+      {key:"due", label:"Fällig"}
+    ];
+    for(const c of chips){
+      const b = document.createElement("button"); b.className = "chip" + ( (c.key==="pin" && currentFilter.pinOnly) || (c.key==="due" && currentFilter.dueOnly) ? " active": "");
+      b.textContent = c.label; b.type="button";
+      b.addEventListener("click", ()=>toggleChip(c.key));
+      row.appendChild(b);
+    }
+    if(currentFilter.tag){
+      const b = document.createElement("button"); b.className="chip active"; b.textContent = "#"+currentFilter.tag;
+      b.addEventListener("click", ()=> setTag(currentFilter.tag));
+      row.appendChild(b);
+    }
+    if(currentFilter.collection){
+      const b = document.createElement("button"); b.className="chip active"; b.innerHTML = `<span class="color-dot" style="background:${getCollectionColor(currentFilter.collection)}"></span> `+getCollectionName(currentFilter.collection);
+      b.addEventListener("click", ()=> setCollectionFilter(currentFilter.collection));
+      row.appendChild(b);
+    }
+  }
+
+  // ---- Rendering: Notes
+  function renderNotes(){
+    renderFilterChips();
+    const wrap = $("#view-notes"); wrap.innerHTML="";
+    const q = currentFilter.query.toLowerCase();
+    let notes = state.notes.slice();
+
+    // filters
+    if(q){
+      notes = notes.filter(n =>
+        (n.title||"").toLowerCase().includes(q) ||
+        (n.content||"").toLowerCase().includes(q) ||
+        (n.tags||[]).some(t => t.toLowerCase().includes(q))
+      );
+    }
+    if(currentFilter.tag){ notes = notes.filter(n => (n.tags||[]).includes(currentFilter.tag)); }
+    if(currentFilter.pinOnly){ notes = notes.filter(n => n.pinned); }
+    if(currentFilter.dueOnly){
+      const today = new Date().toISOString().slice(0,10);
+      notes = notes.filter(n => n.due && n.due <= today);
+    }
+    if(currentFilter.collection){ notes = notes.filter(n => (n.collectionId||"inbox") === currentFilter.collection); }
+
+    // sort: pinned first, then updated desc
+    notes.sort((a,b) => (b.pinned - a.pinned) || (new Date(b.updatedAt)-new Date(a.updatedAt)));
+
+    if(notes.length===0){
+      const empty = document.createElement("div");
+      empty.className = "empty";
+      empty.innerHTML = "Keine Notizen (noch) 😊 <br>Tippe unten auf <b>＋</b>, um loszulegen.";
+      wrap.appendChild(empty);
+      return;
+    }
+
+    for(const n of notes){
+      const div = document.createElement("div"); div.className="note"; div.role="button"; div.tabIndex=0;
+      const snippet = (n.content||"").replace(/\n+/g," ").slice(0,140);
+      const col = getCollection(n.collectionId||"inbox");
+      const colDot = `<span class="color-dot" style="background:${col.color}"></span>`;
+      const taskInfo = getTaskProgress(n.content||"");
+      const taskBadge = taskInfo.total>0 ? `<span class="tag">${taskInfo.done}/${taskInfo.total} ✅</span>` : "";
+      div.innerHTML = `
+        <h3>${escapeHTML(n.title || "Ohne Titel")} ${colDot}</h3>
+        <p>${escapeHTML(snippet)}${snippet.length>=140?"…":""}</p>
+        <div class="meta">
+          <span class="count">📁 ${escapeHTML(col.name)}</span>
+          ${ (n.tags||[]).map(t=>`<span class="tag">#${escapeHTML(t)}</span>`).join("") }
+          ${ taskBadge }
+          ${ n.due ? `<span class="tag ${n.due <= (new Date().toISOString().slice(0,10)) ? 'danger':'ok'}">⏰ ${n.due}</span>` : "" }
+          <span class="muted">· Aktualisiert ${escapeHTML(fmtDate(n.updatedAt))}</span>
+          <button class="pin" aria-label="Pin">${n.pinned?"★":"☆"}</button>
+        </div>
+      `;
+      div.querySelector(".pin").addEventListener("click", (ev) => {
+        ev.stopPropagation();
+        n.pinned = !n.pinned; n.updatedAt = now(); upsertNote(n); renderNotes();
+      });
+      div.addEventListener("click", ()=> openEditor(n.id));
+      wrap.appendChild(div);
+    }
+  }
+
+  // ---- Rendering: Collections & Tags views
+  function renderCollections(){
+    const box = $("#collectionsList"); box.innerHTML="";
+    for(const c of state.collections){
+      const row = document.createElement("div"); row.className="note";
+      const count = state.notes.filter(n => (n.collectionId||"inbox")===c.id).length;
+      row.innerHTML = `
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span class="color-dot" style="background:${c.color}"></span>
+          <input data-name="${c.id}" value="${escapeAttr(c.name)}" style="border:1px solid var(--border); background:var(--card); color:var(--text); border-radius:8px; padding:6px 8px; width:40%;">
+          <input data-color="${c.id}" type="color" value="${escapeAttr(c.color || '#7aa3ff')}" class="color-input">
+          <span class="count">${count} Notiz${count!==1?"en":""}</span>
+          <span style="margin-left:auto;"></span>
+          ${c.id!=="inbox"? `<button class="btn danger" data-del="${c.id}">Löschen</button>`: ""}
+          <button class="btn" data-filter="${c.id}">Filtern</button>
+        </div>`;
+      row.querySelector(`[data-filter="${c.id}"]`).addEventListener("click", ()=> { setCollectionFilter(c.id); showTab("notes"); });
+      const nameInput = row.querySelector(`[data-name="${c.id}"]`);
+      nameInput.addEventListener("input", debounce(()=>{ c.name = nameInput.value.trim() || c.name; saveState(); renderNotes(); }, 300));
+      const colorInput = row.querySelector(`[data-color="${c.id}"]`);
+      colorInput.addEventListener("input", ()=>{ c.color = colorInput.value; saveState(); renderNotes(); renderCollections(); });
+      if(c.id!=="inbox"){
+        row.querySelector(`[data-del="${c.id}"]`).addEventListener("click", ()=>{
+          if(confirm("Sammlung löschen? (Notizen bleiben, werden nach 'Allgemein' verschoben)")){
+            state.notes.forEach(n => { if((n.collectionId||"inbox")===c.id) n.collectionId="inbox"; });
+            state.collections = state.collections.filter(x=>x.id!==c.id);
+            saveState(); renderCollections(); renderNotes();
+          }
+        });
+      }
+      box.appendChild(row);
+    }
+  }
+  function renderTags(){
+    const box = $("#tagsList"); box.innerHTML="";
+    const tagMap = new Map();
+    state.notes.forEach(n => (n.tags||[]).forEach(t => tagMap.set(t, (tagMap.get(t)||0)+1)));
+    const tags = [...tagMap.entries()].sort((a,b)=> b[1]-a[1]);
+    if(tags.length===0){ box.innerHTML = `<div class="empty">Noch keine Tags – füge sie im Editor per Komma hinzu.</div>`; return; }
+    for(const [t,cnt] of tags){
+      const row = document.createElement("div"); row.className="note";
+      row.innerHTML = `
+        <div style="display:flex; align-items:center; gap:10px;">
+          <h3 style="margin:0">#${escapeHTML(t)}</h3>
+          <span class="count">${cnt} Notiz${cnt!==1?"en":""}</span>
+          <span style="margin-left:auto;"></span>
+          <button class="btn" data-filter="${t}">Filtern</button>
+        </div>`;
+      row.querySelector("button").addEventListener("click", ()=>{ setTag(t); showTab("notes"); });
+      box.appendChild(row);
+    }
+  }
+
+  // ---- Editor
+  let edNote = null;
+  function openEditor(id){
+    edNote = state.notes.find(n=>n.id===id) || null;
+    const isNew = !edNote;
+    if(isNew){
+      edNote = {
+        id: uid(), title:"", content:"", tags:[], collectionId:"inbox", pinned:false, due:null, createdAt: now(), updatedAt: now()
+      };
+      state.notes.push(edNote); saveState();
+    }
+    $("#edHeader").textContent = isNew? "Neue Notiz" : "Notiz bearbeiten";
+    $("#edTitle").value = edNote.title || "";
+    $("#edTags").value = (edNote.tags||[]).join(", ");
+    $("#edPinned").checked = !!edNote.pinned;
+    $("#edDue").value = edNote.due || "";
+    $("#edContent").value = edNote.content || "";
+    $("#edPreview").classList.add("hidden");
+    $("#edContent").classList.remove("hidden");
+    $("#btnPreview").textContent = "Preview";
+    updateMeta();
+    // collections select
+    const sel = $("#edCollection"); sel.innerHTML="";
+    for(const c of state.collections){
+      const opt = document.createElement("option"); opt.value = c.id; opt.textContent = c.name;
+      if((edNote.collectionId||"inbox")===c.id) opt.selected=true;
+      sel.appendChild(opt);
+    }
+    $("#editor").style.display="flex";
+    $("#edTitle").focus({preventScroll:true});
+  }
+  function closeEditor(){
+    $("#editor").style.display="none";
+    renderNotes();
+  }
+  function updateMeta(){
+    $("#edMeta").textContent = `Erstellt: ${fmtDate(edNote.createdAt)} · Aktualisiert: ${fmtDate(edNote.updatedAt)}`;
+  }
+  function collectEditor(){
+    edNote.title = $("#edTitle").value.trim();
+    edNote.content = $("#edContent").value;
+    edNote.tags = $("#edTags").value.split(",").map(s=>s.trim()).filter(Boolean);
+    edNote.collectionId = $("#edCollection").value || "inbox";
+    edNote.pinned = $("#edPinned").checked;
+    edNote.due = $("#edDue").value || null;
+    edNote.updatedAt = now();
+    upsertNote(edNote);
+  }
+  const onEdChange = debounce(()=>{ collectEditor(); updateMeta(); }, 200);
+
+  // Simple Markdown + task preview
+  function mdToHtml(md){
+    let h = escapeHTML(md);
+    h = h.replace(/^###### (.*)$/gm, "<h6>$1</h6>")
+         .replace(/^##### (.*)$/gm, "<h5>$1</h5>")
+         .replace(/^#### (.*)$/gm, "<h4>$1</h4>")
+         .replace(/^### (.*)$/gm, "<h3>$1</h3>")
+         .replace(/^## (.*)$/gm, "<h2>$1</h2>")
+         .replace(/^# (.*)$/gm, "<h1>$1</h1>");
+    h = h.replace(/\*\*(.+?)\*\*/g, "<b>$1</b>")
+         .replace(/\*(.+?)\*/g, "<i>$1</i>")
+         .replace(/`(.+?)`/g, "<code>$1</code>");
+    // Tasks: - [ ] and - [x]
+    h = h.replace(/^- \[ \] (.*)$/gm, '<label><input type="checkbox" data-task="0"> $1</label>')
+         .replace(/^- \[x\] (.*)$/gmi, '<label><input type="checkbox" data-task="1" checked> $1</label>');
+    // Lists
+    h = h.replace(/(^|\n)\- (?!\[)(.*)/g, "$1• $2");
+    // Links [text](url)
+    h = h.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, `<a class="link" target="_blank" rel="noopener">$1</a>`);
+    // Paragraphs
+    h = h.replace(/\n{2,}/g, "</p><p>").replace(/\n/g,"<br>");
+    return `<p>${h}</p>`;
+  }
+  function bindTaskToggles(container){
+    container.querySelectorAll('input[type="checkbox"][data-task]').forEach(cb=>{
+      cb.addEventListener('change', () => {
+        // Toggle in source text: find nth task occurrence and switch
+        const src = $("#edContent").value;
+        const lines = src.split(/\n/);
+        let seen = 0;
+        for(let i=0;i<lines.length;i++){
+          if(lines[i].match(/^- \[( |x)\] /i)){
+            if(seen===0 && !cb._bound){ /* marker to avoid multiple toggles in same render */ }
+            if(seen===cb.dataset.idx*1){
+              lines[i] = lines[i].replace(/^- \[( |x)\] /i, cb.checked? "- [x] " : "- [ ] ");
+              break;
+            }
+            seen++;
+          }
+        }
+        $("#edContent").value = lines.join("\n");
+        collectEditor();
+        showPreview(); // re-render
+      });
+    });
+  }
+  function getTaskProgress(text){
+    const total = (text.match(/^- \[( |x)\] /gmi)||[]).length;
+    const done = (text.match(/^- \[x\] /gmi)||[]).length;
+    return {done,total};
+  }
+  function showPreview(){
+    collectEditor();
+    const prev = $("#edPreview");
+    prev.innerHTML = mdToHtml(edNote.content||"");
+    // index the checkboxes so toggling maps to original line
+    let idx = 0;
+    prev.querySelectorAll('input[data-task]').forEach(cb => { cb.dataset.idx = idx++; });
+    bindTaskToggles(prev);
+  }
+
+  // ---- Export / Import / Share / Copy / PDF
+  function doExport(){
+    const data = JSON.stringify(state, null, 2);
+    const blob = new Blob([data], {type:"application/json"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `pocket-notes-${new Date().toISOString().slice(0,10)}.json`; a.rel="noopener";
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(()=> { URL.revokeObjectURL(url); a.remove(); }, 0);
+  }
+  function doImport(file){
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const incoming = JSON.parse(reader.result);
+        if(!incoming || !incoming.notes) throw new Error("Ungültiges Format");
+        // naive merge by id (replace if exists)
+        const ids = new Set(state.notes.map(n=>n.id));
+        for(const n of incoming.notes){ if(ids.has(n.id)){ state.notes = state.notes.map(x=> x.id===n.id?n:x); } else { state.notes.push(n); } }
+        // collections merge
+        const colIds = new Set(state.collections.map(c=>c.id));
+        for(const c of (incoming.collections||[])){ if(!colIds.has(c.id)) state.collections.push(c); }
+        // settings
+        if(incoming.settings) state.settings = incoming.settings;
+        saveState(); applyTheme(); renderNotes(); renderCollections(); renderTags();
+        alert("Import abgeschlossen ✅");
+      } catch(e){ alert("Import fehlgeschlagen: " + e.message); }
+    };
+    reader.readAsText(file);
+  }
+  async function doShare(){
+    try{
+      const text = `${state.notes.length} Notizen · Export am ${new Date().toLocaleString()}`;
+      if(navigator.share){
+        await navigator.share({ title:"Pocket Notes+", text });
+      } else {
+        await navigator.clipboard.writeText(text);
+        alert("Info in Zwischenablage kopiert.");
+      }
+    }catch(e){ /* Nutzer abgebrochen */ }
+  }
+  async function copyCurrent(){
+    if(!edNote) return;
+    try{
+      await navigator.clipboard.writeText(`# ${edNote.title}\n\n${edNote.content}`);
+      alert("Notiz in Zwischenablage kopiert.");
+    }catch(e){ alert("Kopieren nicht möglich."); }
+  }
+  function doPrint(){
+    window.print();
+  }
+
+  // ---- Collections handlers
+  function addCollection(){
+    const name = $("#newCollectionName").value.trim();
+    const color = $("#newCollectionColor").value || "#7aa3ff";
+    if(!name) return;
+    state.collections.push({id: uid(), name, color});
+    $("#newCollectionName").value="";
+    saveState(); renderCollections();
+  }
+
+  // ---- Safety helpers
+  function escapeHTML(str=""){
+    return str.replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+  }
+  function escapeAttr(str=""){
+    return escapeHTML(str).replace(/"/g, '&quot;');
+  }
+
+  // ---- Event wiring
+  function wireEvents(){
+    // Tabs
+    $$("#tab-notes, #tab-collections, #tab-tags, #tab-settings").forEach(t => {
+      t.addEventListener("click", () => showTab(t.dataset.tab));
+    });
+    // Search
+    $("#search").addEventListener("input", e => setQuery(e.target.value));
+    $("#btnClear").addEventListener("click", ()=>{ $("#search").value=""; setQuery(""); });
+    // FAB
+    $("#fab").addEventListener("click", ()=> openEditor(null));
+    // Collections view
+    $("#btnAddCollection").addEventListener("click", addCollection);
+    // Settings
+    $("#themeSel").addEventListener("change", e => { state.settings.theme = e.target.value; applyTheme(); saveState(); });
+    $("#btnExport").addEventListener("click", doExport);
+    $("#btnPrint").addEventListener("click", doPrint);
+    $("#btnImport").addEventListener("click", ()=> $("#fileImport").click());
+    $("#fileImport").addEventListener("change", e => { const f = e.target.files?.[0]; if(f) doImport(f); e.target.value=""; });
+    $("#btnReset").addEventListener("click", ()=>{
+      if(confirm("Wirklich ALLES löschen?")){ localStorage.removeItem(LS_KEY); location.reload(); }
+    });
+    $("#btnShare").addEventListener("click", doShare);
+
+    // Editor
+    $("#btnClose").addEventListener("click", closeEditor);
+    $("#btnDone").addEventListener("click", ()=> { collectEditor(); closeEditor(); });
+    $("#btnDelete").addEventListener("click", ()=>{
+      if(confirm("Notiz endgültig löschen?")){ removeNote(edNote.id); closeEditor(); }
+    });
+    $("#btnCopy").addEventListener("click", copyCurrent);
+    $("#btnPreview").addEventListener("click", ()=>{
+      const prev = $("#edPreview"), ta = $("#edContent");
+      if(prev.classList.contains("hidden")){
+        showPreview();
+        prev.classList.remove("hidden");
+        ta.classList.add("hidden");
+        $("#btnPreview").textContent = "Bearbeiten";
+      } else {
+        prev.classList.add("hidden");
+        ta.classList.remove("hidden");
+        $("#btnPreview").textContent = "Preview";
+      }
+    });
+
+    // Editor live update
+    ["edTitle","edTags","edContent","edCollection","edPinned","edDue"].forEach(id => {
+      const el = $("#"+id);
+      el.addEventListener(el.type==="checkbox"?"change":"input", onEdChange);
+    });
+  }
+
+  // ---- Init
+  loadState();
+  applyTheme();
+  wireEvents();
+  renderNotes();
+
+  // Keyboard-safe space on iOS
+  window.visualViewport && visualViewport.addEventListener("resize", debounce(()=>{
+    document.body.style.height = visualViewport.height + "px";
+  }, 100));
+})();
+</script>
+</body>
+</html>
